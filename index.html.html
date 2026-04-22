@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Infraspeak · Painel Gerencial</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root {
+  /* Petlove Brand Colors */
+  --pl-roxo:    #4E2096;
+  --pl-verde:   #49A971;
+  --pl-amarelo: #FFA840;
+  --pl-vermelho:#EA534A;
+  --pl-gelo:    #F3EEE8;
+
+  /* Dark mode com roxo Petlove como base */
+  --bg:      #0D0B14;
+  --bg2:     #131020;
+  --bg3:     #1C1830;
+  --bg4:     #26223C;
+  --border:  rgba(78,32,150,0.25);
+  --border2: rgba(78,32,150,0.50);
+
+  /* Texto */
+  --text:    #F3EEE8;
+  --text2:   #A89EC0;
+  --text3:   #5C5478;
+
+  /* Semânticas → brand */
+  --green:   #49A971;
+  --green2:  rgba(73,169,113,0.15);
+  --red:     #EA534A;
+  --red2:    rgba(234,83,74,0.15);
+  --amber:   #FFA840;
+  --amber2:  rgba(255,168,64,0.15);
+  --blue:    #7B5FC9;
+  --blue2:   rgba(123,95,201,0.18);
+  --purple:  #6B35CC;
+  --purple2: rgba(107,53,204,0.18);
+  --accent:  #FFA840;
+
+  --r:6px; --rlg:12px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{font-family:'Syne',sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column;-webkit-font-smoothing:antialiased}
+
+/* TOPBAR */
+.topbar{background:var(--bg2);border-bottom:1px solid var(--border);height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 1.25rem;flex-shrink:0;z-index:100}
+.brand{display:flex;align-items:center;gap:10px}
+.brand-logo{background:#FFA840;color:#0D0B14;font-size:10px;font-weight:800;letter-spacing:.06em;padding:4px 8px;border-radius:5px}
+.brand h1{font-size:14px;font-weight:700;letter-spacing:-.2px}
+.topbar-right{display:flex;align-items:center;gap:14px}
+.live{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--green);font-weight:600}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+#lastUpdate{font-size:11px;color:var(--text3);font-family:'DM Mono',monospace}
+.btn{background:var(--bg4);border:1px solid var(--border2);color:var(--text);border-radius:var(--r);padding:6px 13px;font-size:12px;font-family:inherit;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;transition:background .15s}
+.btn:hover{background:var(--bg3)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.spin{display:inline-block;transition:transform .6s}
+.spin.go{transform:rotate(360deg)}
+
+/* LAYOUT */
+.body-wrap{display:flex;flex:1;overflow:hidden}
+
+/* SIDEBAR */
+.sidebar{width:186px;flex-shrink:0;background:var(--bg2);border-right:1px solid var(--border);overflow-y:auto;padding:.875rem}
+.sidebar::-webkit-scrollbar{width:3px}
+.sidebar::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:4px}
+.sb-title{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.sb-group{margin-bottom:12px}
+.sb-group-label{font-size:10px;font-weight:700;color:var(--text2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.06em}
+.sb-items{display:flex;flex-direction:column;gap:2px}
+.sb-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2);cursor:pointer;padding:4px 5px;border-radius:5px;transition:background .1s;user-select:none}
+.sb-item:hover{background:var(--bg3);color:var(--text)}
+.sb-item.active{background:var(--bg3);color:var(--text)}
+.sb-cb{width:13px;height:13px;border:1px solid var(--border2);border-radius:3px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s,border-color .15s}
+.sb-item.active .sb-cb{background:var(--accent);border-color:var(--accent)}
+.sb-ck{display:none;font-size:8px;color:#0E0E11;font-weight:900}
+.sb-item.active .sb-ck{display:block}
+.sb-clear{font-size:10px;color:var(--text3);cursor:pointer;text-align:right;margin-top:3px}
+.sb-clear:hover{color:var(--accent)}
+
+/* MAIN */
+.main{flex:1;overflow-y:auto;padding:1rem;display:flex;flex-direction:column;gap:10px}
+.main::-webkit-scrollbar{width:5px}
+.main::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:4px}
+
+/* KPI */
+.kpi-row{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+.kpi{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rlg);padding:.9rem 1rem;position:relative;overflow:hidden}
+.kpi-line{position:absolute;top:0;left:0;right:0;height:3px}
+.kpi-label{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:5px}
+.kpi-value{font-size:28px;font-weight:800;letter-spacing:-2px;line-height:1}
+.kpi-sub{font-size:10px;color:var(--text3);margin-top:4px;display:flex;align-items:center;gap:5px}
+.pill{display:inline-block;font-size:9px;font-weight:700;padding:2px 6px;border-radius:20px}
+
+/* CARDS */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rlg);padding:.9rem 1rem;display:flex;flex-direction:column}
+.card-title{font-size:12px;font-weight:700;color:var(--text);margin-bottom:2px}
+.card-sub{font-size:10px;color:var(--text3);margin-bottom:8px}
+
+/* GRIDS */
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.g4{display:grid;grid-template-columns:1fr 1fr 1fr 200px;gap:10px}
+
+/* LEGEND */
+.legend{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.leg{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+.leg-sq{width:9px;height:9px;border-radius:2px;flex-shrink:0}
+.leg-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+
+/* ESTADO BARS */
+.estado-list{display:flex;flex-direction:column;gap:7px;flex:1;justify-content:center}
+.estado-item{display:flex;align-items:center;gap:8px}
+.estado-lbl{font-size:10px;color:var(--text2);width:130px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.estado-track{flex:1;height:5px;background:var(--bg4);border-radius:10px;overflow:hidden}
+.estado-fill{height:100%;border-radius:10px}
+.estado-n{font-family:'DM Mono',monospace;font-size:11px;color:var(--text2);min-width:26px;text-align:right}
+
+/* ENCAMINHAMENTO */
+.enc-list{display:flex;flex-direction:column;gap:5px;flex:1;justify-content:space-evenly}
+.enc-item{display:flex;align-items:center;gap:8px}
+.enc-label{font-size:10px;color:var(--text2);width:90px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.enc-track{flex:1;height:5px;background:var(--bg4);border-radius:10px;overflow:hidden}
+.enc-fill{height:100%;border-radius:10px}
+.enc-n{font-family:'DM Mono',monospace;font-size:11px;color:var(--text2);min-width:26px;text-align:right}
+
+/* TIPO RANK */
+.tipo-list{display:flex;flex-direction:column;gap:5px;flex:1;justify-content:space-evenly}
+.tipo-item{display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)}
+.tipo-item:last-child{border-bottom:none}
+.tipo-name{font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px}
+.tipo-val{font-size:17px;font-weight:800;font-family:'DM Mono',monospace;color:var(--text);flex-shrink:0;letter-spacing:-1px}
+
+/* TABELA MENSAL */
+.tbl-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rlg);overflow:hidden}
+.tbl-header{padding:10px 14px 8px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.tbl-header-title{font-size:12px;font-weight:700;color:var(--text)}
+.tbl-header-sub{font-size:10px;color:var(--text3)}
+.tbl-wrap{overflow-x:auto}
+.tbl-wrap table{width:100%;border-collapse:collapse;font-size:12px}
+.tbl-wrap thead th{background:var(--bg3);padding:8px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);border-bottom:1px solid var(--border);white-space:nowrap}
+.tbl-wrap thead th:not(:first-child){text-align:right}
+.tbl-wrap tbody td{padding:8px 14px;border-bottom:1px solid var(--border);color:var(--text)}
+.tbl-wrap tbody td:not(:first-child){text-align:right;font-family:'DM Mono',monospace;font-size:11px}
+.tbl-wrap tbody tr:last-child td{border-bottom:none}
+.tbl-wrap tbody tr:hover td{background:var(--bg3)}
+.tbl-wrap tfoot td{padding:8px 14px;background:var(--bg3);font-weight:700;font-size:12px;border-top:1px solid var(--border2)}
+.tbl-wrap tfoot td:not(:first-child){text-align:right;font-family:'DM Mono',monospace;font-size:12px}
+.saldo-pos{color:var(--red)}
+.saldo-neg{color:var(--green)}
+.tag-ab{display:inline-block;background:rgba(234,83,74,0.15);color:#EA534A;font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px}
+.tag-fech{display:inline-block;background:rgba(73,169,113,0.15);color:#49A971;font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px}
+.part-bar{display:flex;align-items:center;gap:6px;justify-content:flex-end}
+.part-track{width:60px;height:4px;background:var(--bg4);border-radius:10px;overflow:hidden;flex-shrink:0}
+.part-fill{height:100%;border-radius:10px;background:#4E2096}
+
+/* LOADING / ERROR */
+.state-box{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;color:var(--text3);font-size:13px;flex:1}
+.spinner{width:24px;height:24px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.err{background:var(--red2);border:1px solid rgba(255,92,92,.2);border-radius:var(--rlg);padding:1.25rem;color:var(--red);font-size:13px;line-height:1.7}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <span class="brand-logo">IS</span>
+    <h1>Painel Gerencial · Infraspeak</h1>
+  </div>
+  <div class="topbar-right">
+    <div class="live"><span class="live-dot"></span>ao vivo</div>
+    <span id="lastUpdate">—</span>
+    <button class="btn" id="refreshBtn" onclick="loadData()">
+      <span class="spin" id="spinIcon">↻</span> Atualizar
+    </button>
+  </div>
+</div>
+
+<div class="body-wrap">
+  <div class="sidebar" id="sidebar">
+    <div style="font-size:11px;color:var(--text3);padding:.5rem 0">Carregando...</div>
+  </div>
+  <div class="main" id="main">
+    <div class="state-box"><div class="spinner"></div><span>Buscando dados...</span></div>
+  </div>
+</div>
+
+<script>
+const API = 'https://script.google.com/macros/s/AKfycbwK-B258hJBc_j9p60y60Tq9sOP6Gr3SyMZ1d5GdG53hGEbDxhv_FRsVGN91a7hwTwCCg/exec';
+let allData = [];
+const charts = {};
+const filters = { tipo:new Set(), loja:new Set(), ano:new Set(), mes:new Set(), status:new Set() };
+
+function g(row,...keys){
+  for(const k of keys){
+    if(row[k]!==undefined&&row[k]!==null&&String(row[k]).trim()!=='') return String(row[k]).trim();
+    for(const rk of Object.keys(row))
+      if(rk.trim().toLowerCase()===k.toLowerCase()&&String(row[rk]).trim()!=='') return String(row[rk]).trim();
+  }
+  return '';
+}
+
+const ABREV = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+const PT_MES = ['janeiro','fevereiro','março','marco','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+const PT_IDX  = [0,1,2,2,3,4,5,6,7,8,9,10,11]; // março/marco ambos índice 2
+
+// Converte serial Excel/Sheets (número) para Date
+function excelSerial(n){
+  return new Date(Math.round((n - 25569)*86400*1000));
+}
+
+// Normaliza QUALQUER formato de mês para "mmm.aa"
+function normalizeMes(raw){
+  if(raw===null||raw===undefined||String(raw).trim()==='') return null;
+  const s = String(raw).trim();
+
+  // Número puro → serial Excel (ex: 46023)
+  if(/^\d{5,6}$/.test(s)){
+    const d = excelSerial(parseInt(s));
+    return ABREV[d.getMonth()]+'.'+String(d.getFullYear()).substring(2);
+  }
+
+  const sl = s.toLowerCase();
+
+  // "jan.26" ou "jan/26" ou "jan 26" (3 letras + separador + 2-4 dígitos)
+  const r1 = sl.match(/^([a-záéíóúãõ]{3,4})[\.\s\/\-_](\d{2,4})$/);
+  if(r1){
+    const mon = r1[1].substring(0,3)==='mar'?'mar':r1[1].substring(0,3);
+    const idx = ABREV.indexOf(mon);
+    const yr  = r1[2].length===4 ? r1[2].substring(2) : r1[2];
+    if(idx>=0) return ABREV[idx]+'.'+yr;
+  }
+
+  // Mês por extenso: "Janeiro/2026", "janeiro 26", "março/26"
+  for(let i=0;i<PT_MES.length;i++){
+    if(sl.startsWith(PT_MES[i])){
+      const rest = sl.slice(PT_MES[i].length).replace(/[^0-9]/g,'');
+      const yr   = rest.length>=4 ? rest.substring(rest.length-2) : rest.substring(0,2);
+      if(yr) return ABREV[PT_IDX[i]]+'.'+yr;
+    }
+  }
+
+  // Formato "01/2026", "1/26", "01-2026"
+  const r2 = sl.match(/^(\d{1,2})[\.\s\/\-](\d{2,4})$/);
+  if(r2){
+    const mn = parseInt(r2[1])-1;
+    const yr = r2[2].length===4 ? r2[2].substring(2) : r2[2];
+    if(mn>=0&&mn<12) return ABREV[mn]+'.'+yr;
+  }
+
+  // ISO "2026-01-01" ou "2026/01/01"
+  const r3 = sl.match(/^(\d{4})[\-\/](\d{1,2})/);
+  if(r3){
+    const mn = parseInt(r3[2])-1;
+    const yr = r3[1].substring(2);
+    if(mn>=0&&mn<12) return ABREV[mn]+'.'+yr;
+  }
+
+  // Tenta extrair um objeto Date serializado como string "Date(2026,0,15)"
+  const r4 = sl.match(/date\((\d{4}),(\d{1,2})/i);
+  if(r4){
+    const yr = r4[1].substring(2);
+    const mn = parseInt(r4[2]);
+    if(mn>=0&&mn<12) return ABREV[mn]+'.'+yr;
+  }
+
+  return null;
+}
+
+// Descobre qual chave de mês existe na row e retorna valor normalizado
+function getMesKey(row, ...candidates){
+  for(const k of candidates){
+    const val = g(row,k);
+    if(val){
+      const n = normalizeMes(val);
+      if(n) return n;
+    }
+  }
+  // Tenta varredura por todas as chaves
+  for(const rk of Object.keys(row)){
+    const rkl = rk.toLowerCase().replace(/\s/g,'');
+    if(candidates.some(c=>rkl.includes(c.toLowerCase().replace(/\s/g,'').substring(0,5)))){
+      const n = normalizeMes(row[rk]);
+      if(n) return n;
+    }
+  }
+  return null;
+}
+
+function getMes(row){
+  const v = row['_mes_abertura'] || row['Mês abertura'] || row['Mes abertura'] || '';
+  return normalizeMes(v) || null;
+}
+function getMesFech(row){
+  const v = row['_mes_fechamento'] || row['Mês Fechamento'] || row['Mes Fechamento'] || '';
+  return normalizeMes(v) || null;
+}
+
+// Exibe "jan.26" → "Jan/26"
+function fmtMes(m){
+  if(!m) return '—';
+  const p = m.split('.');
+  return p[0].charAt(0).toUpperCase()+p[0].slice(1)+'/'+(p[1]||'');
+}
+
+function ordenaMeses(arr){
+  const ord=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+  return [...new Set(arr)].filter(Boolean).sort((a,b)=>{
+    const[ma,ya]=(a||'').toLowerCase().split('.');
+    const[mb,yb]=(b||'').toLowerCase().split('.');
+    if(ya!==yb) return (parseInt(ya)||0)-(parseInt(yb)||0);
+    return ord.indexOf(ma)-ord.indexOf(mb);
+  });
+}
+
+async function loadData(){
+  const btn=document.getElementById('refreshBtn'),ico=document.getElementById('spinIcon');
+  btn.disabled=true;ico.classList.add('go');
+  setTimeout(()=>ico.classList.remove('go'),700);
+  try{
+    const res=await fetch(API);
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const json=await res.json();
+    if(!Array.isArray(json)) throw new Error('Formato inválido');
+    allData=json.filter(r=>g(r,'Id chamado'));
+    buildSidebar();
+    renderDashboard();
+    const now=new Date().toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+    document.getElementById('lastUpdate').textContent=now+' · '+allData.length+' registros';
+  }catch(e){
+    document.getElementById('main').innerHTML=`<div class="err"><strong>Falha ao carregar</strong><br>${e.message}</div>`;
+  }
+  btn.disabled=false;
+}
+
+function getFiltered(){
+  return allData.filter(r=>{
+    if(filters.tipo.size   && !filters.tipo.has(g(r,'RESUMO TIPO')))                          return false;
+    if(filters.loja.size   && !filters.loja.has(g(r,'RESUMO LOJA')))                          return false;
+    if(filters.status.size && !filters.status.has(g(r,'Status chamado')))                     return false;
+    if(filters.mes.size){const mn=getMes(r); if(!mn||!filters.mes.has(mn)) return false;}
+    if(filters.ano.size){const mn=getMes(r); const yr='20'+((mn||'').split('.').pop()||''); if(!filters.ano.has(yr)) return false;}
+    return true;
+  });
+}
+
+function buildSidebar(){
+  const tipos   =[...new Set(allData.map(r=>g(r,'RESUMO TIPO')).filter(Boolean))].sort();
+  const lojas   =[...new Set(allData.map(r=>g(r,'RESUMO LOJA')).filter(Boolean))].sort();
+  const mesesRaw= allData.map(r=>getMes(r)).filter(Boolean);
+  const meses   = ordenaMeses(mesesRaw);
+  const anos    =[...new Set(meses.map(m=>'20'+(m.split('.').pop()||'')))].sort();
+  const statuses=[...new Set(allData.map(r=>g(r,'Status chamado')).filter(Boolean))].sort();
+
+  const mk=(title,key,items,fmt)=>`
+    <div class="sb-group">
+      <div class="sb-group-label">${title}</div>
+      <div class="sb-items" id="sb-${key}">
+        ${items.map(v=>`<div class="sb-item" data-key="${key}" data-val="${v}" onclick="toggleFilter('${key}','${v}',this)">
+          <div class="sb-cb"><span class="sb-ck">✓</span></div>
+          <span title="${v}">${fmt?fmt(v):v}</span>
+        </div>`).join('')}
+      </div>
+      <div class="sb-clear" onclick="clearGroup('${key}')">limpar</div>
+    </div>`;
+
+  document.getElementById('sidebar').innerHTML=`
+    <div class="sb-title">Filtros</div>
+    ${mk('Tipo de manutenção','tipo',tipos, v=>v.replace('Manut predial - ',''))}
+    ${mk('Loja','loja',lojas)}
+    ${mk('Ano','ano',anos)}
+    ${mk('Mês','mes',meses, fmtMes)}
+    ${mk('Status','status',statuses)}
+  `;
+}
+
+function toggleFilter(key,val,el){
+  filters[key].has(val)?filters[key].delete(val):filters[key].add(val);
+  el.classList.toggle('active');
+  renderDashboard();
+}
+function clearGroup(key){
+  filters[key].clear();
+  document.getElementById('sb-'+key)?.querySelectorAll('.sb-item').forEach(el=>el.classList.remove('active'));
+  renderDashboard();
+}
+
+function renderDashboard(){
+  const data=getFiltered();
+  const total=data.length;
+  if(!total){
+    document.getElementById('main').innerHTML='<div class="state-box"><span>Nenhum chamado com os filtros selecionados.</span></div>';
+    return;
+  }
+
+  const abertos  =data.filter(r=>g(r,'Status chamado')==='Aberto').length;
+  const fechados =data.filter(r=>g(r,'Status chamado')==='Fechado').length;
+  const atrasados=data.filter(r=>g(r,'Status SLA')==='Atrasado').length;
+  const noSLA    =data.filter(r=>g(r,'Status SLA')==='Dentro do SLA').length;
+  const foraDoSLA=data.filter(r=>g(r,'Status SLA')==='Fora do SLA').length;
+
+  // Unidades — Lojas vs Matriz
+  const allLojas=[...new Set(data.map(r=>g(r,'RESUMO LOJA')).filter(Boolean))];
+  const unidLojas  =allLojas.filter(l=>!['MATRIZ','ESC','CD'].some(p=>l.toUpperCase().includes(p)));
+  const unidMatriz =allLojas.filter(l=>['MATRIZ','ESC','CD'].some(p=>l.toUpperCase().includes(p)));
+
+  // Por loja (aberto/fechado)
+  const porLoja={};
+  allLojas.sort().forEach(l=>{
+    const rows=data.filter(r=>g(r,'RESUMO LOJA')===l);
+    porLoja[l]={
+      abertos:rows.filter(r=>g(r,'Status chamado')==='Aberto').length,
+      fechados:rows.filter(r=>g(r,'Status chamado')==='Fechado').length,
+      total:rows.length
+    };
+  });
+  const lojasSorted=[...allLojas].sort((a,b)=>porLoja[b].total-porLoja[a].total);
+
+  // Tipo ranking
+  const tipoMap={};
+  data.forEach(r=>{const t=g(r,'RESUMO TIPO')||'Outros';tipoMap[t]=(tipoMap[t]||0)+1;});
+  const tiposSorted=Object.entries(tipoMap).sort((a,b)=>b[1]-a[1]).slice(0,6);
+
+  // Estado/status dos chamados
+  const estadoMap={};
+  data.forEach(r=>{const e=g(r,'Estado')||'N/A';estadoMap[e]=(estadoMap[e]||0)+1;});
+  const estadosSorted=Object.entries(estadoMap).sort((a,b)=>b[1]-a[1]);
+  const maxE=Math.max(...Object.values(estadoMap),1);
+  const eColors={'Fechado':'#49A971','A aguardar aprovação':'#7B5FC9','Em resolução':'#FFA840','Pausado':'#4E2096','A aguardar resolução':'#EA534A'};
+
+  // Encaminhamento (Status Belgu agrupado)
+  const belguMap={};
+  data.forEach(r=>{
+    const b=(g(r,'Status Belgu')||'').toLowerCase().trim();
+    const key=b.includes('preventiv')?'Preventiva'
+      :b.includes('compra')?'Compras'
+      :b.includes('orç')||b.includes('orc')?'Orçamento'
+      :b.includes('resolução')||b.includes('resolucao')?'Em resolução'
+      :b===''?'Sem status'
+      :'Outros';
+    belguMap[key]=(belguMap[key]||0)+1;
+  });
+  const belguSorted=Object.entries(belguMap).sort((a,b)=>b[1]-a[1]);
+  const maxB=Math.max(...Object.values(belguMap),1);
+  const bColors={'Preventiva':'#7B5FC9','Compras':'#FFA840','Orçamento':'#4E2096','Em resolução':'#49A971','Sem status':'#5C5478','Outros':'#A89EC0'};
+
+  // Todos os meses que aparecem em abertura OU fechamento
+  const mesesRaw=data.map(r=>getMes(r)).filter(Boolean);
+  const mesesFechRaw=data.map(r=>getMesFech(r)).filter(Boolean);
+  const todosMeses=ordenaMeses([...mesesRaw,...mesesFechRaw]);
+
+  const mesFechMap={};
+  todosMeses.forEach(m=>{
+    const rowsAb   = data.filter(r=>getMes(r)===m);
+    const rowsFech = data.filter(r=>getMesFech(r)===m && getMesFech(r)!==null);
+
+    mesFechMap[m]={
+      abertos:         rowsAb.filter(r=>g(r,'Status chamado')==='Aberto').length,
+      fechados_status: rowsAb.filter(r=>g(r,'Status chamado')==='Fechado').length,
+      total:           rowsAb.length,
+      criados:         rowsAb.length,
+      // Concluídos = todos que têm Mês Fechamento = m (coluna BH da planilha)
+      concluidos:      rowsFech.length,
+    };
+  });
+  const meses = todosMeses;
+
+  // ── MÉDIAS ──────────────────────────────────────────────
+  // 1. Média de chamados criados por mês
+  const mesesComDados = meses.filter(m => mesFechMap[m]?.criados > 0);
+  const mediaPorMes = mesesComDados.length
+    ? Math.round(mesesComDados.reduce((s,m) => s + mesFechMap[m].criados, 0) / mesesComDados.length)
+    : 0;
+
+  // 2. Média de dias para fechar (coluna "Tempo para fechar (segundos)")
+  const fechadosComTempo = data.filter(r => {
+    const t = parseFloat(g(r,'Tempo para fechar (segundos)') || g(r,'Tempo para fechar') || '0');
+    return t > 0 && g(r,'Status chamado') === 'Fechado';
+  });
+  const mediaDiasFechNum = fechadosComTempo.length
+    ? fechadosComTempo.reduce((s,r) => {
+        const seg = parseFloat(g(r,'Tempo para fechar (segundos)') || g(r,'Tempo para fechar') || '0');
+        return s + seg / 86400;
+      }, 0) / fechadosComTempo.length
+    : 0;
+  const mediaDiasFech = mediaDiasFechNum.toFixed(1);
+
+  // 3. Média de chamados por loja
+  const totalLojas = allLojas.length || 1;
+  const mediaPorLoja = Math.round(total / totalLojas);
+
+  // Loja com mais e menos chamados
+  const lojaMax = lojasSorted[0] || '';
+  const lojaMin = [...lojasSorted].reverse()[0] || '';
+
+  document.getElementById('main').innerHTML=`
+
+    <!-- KPIs -->
+    <div class="kpi-row">
+      <div class="kpi">
+        <div class="kpi-line" style="background:var(--text3)"></div>
+        <div class="kpi-label">Total chamados</div>
+        <div class="kpi-value">${total>=1000?(total/1000).toFixed(1)+' Mil':total}</div>
+        <div class="kpi-sub">histórico completo</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-line" style="background:var(--green)"></div>
+        <div class="kpi-label">Fechados</div>
+        <div class="kpi-value" style="color:var(--green)">${fechados>=1000?(fechados/1000).toFixed(1)+' Mil':fechados}</div>
+        <div class="kpi-sub"><span class="pill" style="background:var(--green2);color:var(--green)">${Math.round(fechados/total*100)}%</span> do total</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-line" style="background:var(--blue)"></div>
+        <div class="kpi-label">Abertos</div>
+        <div class="kpi-value" style="color:var(--blue)">${abertos}</div>
+        <div class="kpi-sub"><span class="pill" style="background:var(--blue2);color:var(--blue)">${Math.round(abertos/total*100)}%</span> do total</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-line" style="background:var(--amber)"></div>
+        <div class="kpi-label">Lojas</div>
+        <div class="kpi-value" style="color:var(--amber)">${unidLojas.length}</div>
+        <div class="kpi-sub">unidades de loja</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-line" style="background:var(--purple)"></div>
+        <div class="kpi-label">Matriz / Escrit.</div>
+        <div class="kpi-value" style="color:var(--purple)">${unidMatriz.length}</div>
+        <div class="kpi-sub">unidades matriz</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-line" style="background:var(--accent)"></div>
+        <div class="kpi-label">Total unidades</div>
+        <div class="kpi-value" style="color:var(--accent)">${allLojas.length}</div>
+        <div class="kpi-sub">todas as unidades</div>
+      </div>
+    </div>
+
+    <!-- MÉDIAS -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+      <div class="card" style="flex-direction:row;align-items:center;gap:1rem;padding:.875rem 1.25rem">
+        <div style="width:44px;height:44px;border-radius:10px;background:rgba(123,95,201,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <span style="font-size:20px">📅</span>
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:4px">Média por mês</div>
+          <div style="font-size:26px;font-weight:800;letter-spacing:-1px;color:#7B5FC9;line-height:1">${mediaPorMes}</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:3px">chamados criados/mês · ${mesesComDados.length} meses</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:10px;color:var(--text3);margin-bottom:2px">maior mês</div>
+          <div style="font-size:13px;font-weight:700;color:var(--text);font-family:'DM Mono',monospace">${Math.max(...meses.map(m=>mesFechMap[m]?.criados||0))}</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:4px;margin-bottom:2px">menor mês</div>
+          <div style="font-size:13px;font-weight:700;color:var(--text);font-family:'DM Mono',monospace">${Math.min(...mesesComDados.map(m=>mesFechMap[m]?.criados||0))}</div>
+        </div>
+      </div>
+
+      <div class="card" style="flex-direction:row;align-items:center;gap:1rem;padding:.875rem 1.25rem">
+        <div style="width:44px;height:44px;border-radius:10px;background:rgba(73,169,113,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <span style="font-size:20px">⏱️</span>
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:4px">Média dias para fechar</div>
+          <div style="font-size:26px;font-weight:800;letter-spacing:-1px;color:#49A971;line-height:1">${mediaDiasFech}<span style="font-size:13px;font-weight:500;color:var(--text3);margin-left:4px">dias</span></div>
+          <div style="font-size:10px;color:var(--text3);margin-top:3px">baseado em ${fechadosComTempo.length} chamados fechados</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:10px;color:var(--text3);margin-bottom:2px">em horas</div>
+          <div style="font-size:13px;font-weight:700;color:var(--text);font-family:'DM Mono',monospace">${Math.round(mediaDiasFechNum*24)}h</div>
+        </div>
+      </div>
+
+      <div class="card" style="flex-direction:row;align-items:center;gap:1rem;padding:.875rem 1.25rem">
+        <div style="width:44px;height:44px;border-radius:10px;background:rgba(255,168,64,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <span style="font-size:20px">🏪</span>
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:4px">Média por loja</div>
+          <div style="font-size:26px;font-weight:800;letter-spacing:-1px;color:#FFA840;line-height:1">${mediaPorLoja}</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:3px">chamados · ${allLojas.length} unidades</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:10px;color:var(--text3);margin-bottom:2px">+ chamados</div>
+          <div style="font-size:11px;font-weight:700;color:#EA534A;font-family:'DM Mono',monospace">${lojaMax} (${porLoja[lojaMax]?.total||0})</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:4px;margin-bottom:2px">- chamados</div>
+          <div style="font-size:11px;font-weight:700;color:#49A971;font-family:'DM Mono',monospace">${lojaMin} (${porLoja[lojaMin]?.total||0})</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LINHA 2: barras loja, status, donut -->
+    <div class="g3">
+      <div class="card">
+        <div class="card-title">Chamados por loja</div>
+        <div class="card-sub">Aberto · Fechado por unidade</div>
+        <div class="legend">
+          <div class="leg"><span class="leg-sq" style="background:#7B5FC9"></span>Aberto</div>
+          <div class="leg"><span class="leg-sq" style="background:#49A971"></span>Fechado</div>
+        </div>
+        <div style="position:relative;flex:1;min-height:190px">
+          <canvas id="cLoja" role="img" aria-label="Por loja">Por loja.</canvas>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Status dos chamados</div>
+        <div class="card-sub">Volume por estado atual</div>
+        <div class="estado-list">
+          ${estadosSorted.map(([e,v])=>`
+            <div class="estado-item">
+              <span class="estado-lbl" title="${e}">${e}</span>
+              <div class="estado-track"><div class="estado-fill" style="width:${Math.round(v/maxE*100)}%;background:${eColors[e]||'var(--text3)'}"></div></div>
+              <span class="estado-n">${v}</span>
+            </div>`).join('')}
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">SLA — distribuição</div>
+        <div class="card-sub">Dentro, fora e atrasados</div>
+        <div style="position:relative;height:155px">
+          <canvas id="cDonut" role="img" aria-label="Donut SLA">SLA.</canvas>
+        </div>
+        <div class="legend" style="margin-top:8px;margin-bottom:0;justify-content:center">
+          <div class="leg"><span class="leg-dot" style="background:#49A971"></span>No SLA (${noSLA})</div>
+          <div class="leg"><span class="leg-dot" style="background:#7B5FC9"></span>Fora (${foraDoSLA})</div>
+          <div class="leg"><span class="leg-dot" style="background:#EA534A"></span>Atrasado (${atrasados})</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LINHA 3: duas tabelas + gráfico fluxo -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+
+      <!-- TABELA A: status dos chamados abertos por mês -->
+      <div class="tbl-card">
+        <div class="tbl-header">
+          <div>
+            <div class="tbl-header-title">Chamados abertos — por mês de abertura</div>
+            <div class="tbl-header-sub">Status atual dos chamados criados em cada mês</div>
+          </div>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th style="text-align:left">Mês abertura</th>
+                <th>Criados</th>
+                <th>Ainda abertos</th>
+                <th>Fechados</th>
+                <th>% resolvido</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${meses.map((m,i)=>{
+                const tot  = mesFechMap[m]?.total || 0;
+                const ab   = mesFechMap[m]?.abertos || 0;
+                const fech = mesFechMap[m]?.fechados_status || 0;
+                const pct  = tot>0 ? Math.round(fech/tot*100) : 0;
+                const isUlt= i===meses.length-1;
+                const nomeMes = m.split('.')[0].charAt(0).toUpperCase()+m.split('.')[0].slice(1)+'/'+m.split('.')[1];
+                const barW = pct;
+                return `<tr>
+                  <td style="font-weight:600">${nomeMes}${isUlt?' <span style="font-size:9px;color:var(--text3)">(parcial)</span>':''}</td>
+                  <td style="font-family:'DM Mono',monospace;text-align:right">${tot}</td>
+                  <td style="color:#7B5FC9;font-family:'DM Mono',monospace;text-align:right;font-weight:700">${ab}</td>
+                  <td style="color:#49A971;font-family:'DM Mono',monospace;text-align:right;font-weight:700">${fech}</td>
+                  <td>
+                    <div style="display:flex;align-items:center;gap:6px;justify-content:flex-end">
+                      <span style="font-size:11px;color:var(--text2);font-family:'DM Mono',monospace">${pct}%</span>
+                      <div style="width:50px;height:4px;background:var(--bg4);border-radius:10px;overflow:hidden;flex-shrink:0">
+                        <div style="width:${barW}%;height:100%;background:#49A971;border-radius:10px"></div>
+                      </div>
+                    </div>
+                  </td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td>Total</td>
+                <td style="text-align:right;font-family:'DM Mono',monospace">${meses.reduce((s,m)=>s+(mesFechMap[m]?.total||0),0)}</td>
+                <td style="text-align:right;font-family:'DM Mono',monospace;color:#7B5FC9;font-weight:700">${meses.reduce((s,m)=>s+(mesFechMap[m]?.abertos||0),0)}</td>
+                <td style="text-align:right;font-family:'DM Mono',monospace;color:#49A971;font-weight:700">${meses.reduce((s,m)=>s+(mesFechMap[m]?.fechados_status||0),0)}</td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+      <!-- TABELA B: fluxo real — criados vs concluídos por mês -->
+      <div class="tbl-card">
+        <div class="tbl-header">
+          <div>
+            <div class="tbl-header-title">Fluxo real de chamados por mês</div>
+            <div class="tbl-header-sub">Quantos foram <strong style="color:#7B5FC9">criados</strong> vs <strong style="color:#49A971">concluídos</strong> em cada mês</div>
+          </div>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th style="text-align:left">Mês</th>
+                <th>Criados</th>
+                <th>Concluídos</th>
+                <th>Saldo</th>
+                <th>Participação</th>
+                <th>Tendência</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${(()=>{
+                const totalGeral=meses.reduce((s,m)=>s+(mesFechMap[m]?.criados||0),0)||1;
+                return meses.map((m,i)=>{
+                  const cri  = mesFechMap[m]?.criados     || 0;
+                  const conc = mesFechMap[m]?.concluidos  || 0;
+                  const saldo= cri - conc;
+                  const part = Math.round(cri/totalGeral*100*10)/10;
+                  const isUlt= i===meses.length-1;
+                  const nomeMes=m.split('.')[0].charAt(0).toUpperCase()+m.split('.')[0].slice(1)+'/'+m.split('.')[1];
+                  const saldoCor = saldo>0 ? '#EA534A' : '#49A971';
+                  const saldoStr = (saldo>0?'+':'')+saldo;
+                  const tag = saldo>0
+                    ? `<span class="tag-ab">▲ Mais criados</span>`
+                    : saldo<0
+                    ? `<span class="tag-fech">▼ Mais fechados</span>`
+                    : `<span style="font-size:9px;color:var(--text3)">= Equilibrado</span>`;
+                  return `<tr>
+                    <td style="font-weight:600">${nomeMes}${isUlt?' <span style="font-size:9px;color:var(--text3)">(parcial)</span>':''}</td>
+                    <td style="color:#7B5FC9;font-family:'DM Mono',monospace;text-align:right;font-weight:700">${cri}</td>
+                    <td style="color:#49A971;font-family:'DM Mono',monospace;text-align:right;font-weight:700">${conc}</td>
+                    <td style="color:${saldoCor};font-family:'DM Mono',monospace;text-align:right;font-weight:700">${saldoStr}</td>
+                    <td>
+                      <div style="display:flex;align-items:center;gap:6px;justify-content:flex-end">
+                        <span style="font-size:11px;color:var(--text2);font-family:'DM Mono',monospace">${part}%</span>
+                        <div style="width:50px;height:4px;background:var(--bg4);border-radius:10px;overflow:hidden;flex-shrink:0">
+                          <div style="width:${part}%;height:100%;background:#4E2096;border-radius:10px"></div>
+                        </div>
+                      </div>
+                    </td>
+                    <td>${tag}</td>
+                  </tr>`;
+                }).join('');
+              })()}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td>Total</td>
+                <td style="text-align:right;font-family:'DM Mono',monospace;color:#7B5FC9;font-weight:700">${meses.reduce((s,m)=>s+(mesFechMap[m]?.criados||0),0)}</td>
+                <td style="text-align:right;font-family:'DM Mono',monospace;color:#49A971;font-weight:700">${meses.reduce((s,m)=>s+(mesFechMap[m]?.concluidos||0),0)}</td>
+                <td style="font-family:'DM Mono',monospace;text-align:right;font-weight:700;color:${(()=>{const s=meses.reduce((a,m)=>a+(mesFechMap[m]?.criados||0),0)-meses.reduce((a,m)=>a+(mesFechMap[m]?.concluidos||0),0);return s>0?'#EA534A':'#49A971';})()}">${(()=>{const s=meses.reduce((a,m)=>a+(mesFechMap[m]?.criados||0),0)-meses.reduce((a,m)=>a+(mesFechMap[m]?.concluidos||0),0);return (s>0?'+':'')+s;})()}</td>
+                <td></td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- GRÁFICO FLUXO COMPARATIVO -->
+    <div class="card">
+      <div class="card-title">Fluxo mensal — Criados vs Concluídos</div>
+      <div class="card-sub">Comparativo direto: quando criamos mais do que fechamos, o estoque de chamados cresce</div>
+      <div class="legend">
+        <div class="leg"><span class="leg-sq" style="background:#7B5FC9"></span>Criados no mês</div>
+        <div class="leg"><span class="leg-sq" style="background:#49A971"></span>Concluídos no mês</div>
+        <div class="leg"><span class="leg-dot" style="background:#FFA840"></span>Saldo acumulado</div>
+      </div>
+      <div style="position:relative;width:100%;height:200px">
+        <canvas id="cFluxo" role="img" aria-label="Fluxo criados vs concluídos">Fluxo.</canvas>
+      </div>
+    </div>
+
+    <!-- LINHA 4: evolução mensal, pizza SLA, encaminhamentos, tipos -->
+    <div class="g4">
+      <div class="card">
+        <div class="card-title">Evolução mensal</div>
+        <div class="card-sub">Abertos · Fechados · Total (linha)</div>
+        <div class="legend">
+          <div class="leg"><span class="leg-sq" style="background:#7B5FC9"></span>Aberto</div>
+          <div class="leg"><span class="leg-sq" style="background:#49A971"></span>Fechado</div>
+          <div class="leg"><span class="leg-dot" style="background:#FFA840"></span>Total</div>
+        </div>
+        <div style="position:relative;flex:1;min-height:175px">
+          <canvas id="cMensal" role="img" aria-label="Evolução mensal">Mensal.</canvas>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">SLA por proporção</div>
+        <div class="card-sub">Dentro · Fora · Atrasado</div>
+        <div style="position:relative;flex:1;min-height:175px">
+          <canvas id="cPizza" role="img" aria-label="Pizza SLA">Pizza.</canvas>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Encaminhamentos</div>
+        <div class="card-sub">Status Belgu agrupado</div>
+        <div class="enc-list">
+          ${belguSorted.map(([k,v])=>`
+            <div class="enc-item">
+              <span class="enc-label" title="${k}">${k}</span>
+              <div class="enc-track"><div class="enc-fill" style="width:${Math.round(v/maxB*100)}%;background:${bColors[k]||'var(--text3)'}"></div></div>
+              <span class="enc-n">${v}</span>
+            </div>`).join('')}
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Tipos</div>
+        <div class="card-sub">Top categorias</div>
+        <div class="tipo-list">
+          ${tiposSorted.map(([t,v])=>`
+            <div class="tipo-item">
+              <span class="tipo-name">${t.replace('Manut predial - ','')}</span>
+              <span class="tipo-val">${v}</span>
+            </div>`).join('')}
+        </div>
+      </div>
+    </div>
+  `;
+
+  buildCharts(lojasSorted,porLoja,meses,mesFechMap,noSLA,foraDoSLA,atrasados);
+}
+
+function buildCharts(lojasSorted,porLoja,meses,mesFechMap,noSLA,foraDoSLA,atrasados){
+  const cht=(id,cfg)=>{if(charts[id])charts[id].destroy();const el=document.getElementById(id);if(el)charts[id]=new Chart(el,cfg);};
+  // Petlove brand palette
+  const C = {
+    roxo:    '#4E2096',
+    roxoL:   '#7B5FC9',
+    verde:   '#49A971',
+    amarelo: '#FFA840',
+    verm:    '#EA534A',
+    gelo:    '#F3EEE8',
+    roxoA:   'rgba(78,32,150,0.65)',
+    verdeA:  'rgba(73,169,113,0.70)',
+    amarA:   'rgba(255,168,64,0.80)',
+    vermA:   'rgba(234,83,74,0.70)',
+    grid:    'rgba(78,32,150,0.12)',
+    tick:    {color:'#5C5478',font:{size:10,family:'DM Mono'}},
+  };
+  const mLabels=meses.map(fmtMes);
+
+  cht('cLoja',{
+    type:'bar',
+    data:{
+      labels:lojasSorted,
+      datasets:[
+        {label:'Aberto',  data:lojasSorted.map(l=>porLoja[l].abertos),  backgroundColor:C.roxoA, borderRadius:3},
+        {label:'Fechado', data:lojasSorted.map(l=>porLoja[l].fechados), backgroundColor:C.verdeA, borderRadius:3}
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{grid:{color:C.grid},ticks:{...C.tick,maxRotation:45}},
+        y:{grid:{color:C.grid},ticks:C.tick}
+      }
+    }
+  });
+
+  cht('cDonut',{
+    type:'doughnut',
+    data:{
+      labels:['Dentro do SLA','Fora do SLA','Atrasado'],
+      datasets:[{data:[noSLA,foraDoSLA,atrasados],backgroundColor:[C.verde,C.roxoL,C.verm],borderWidth:0,hoverOffset:4}]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,cutout:'65%',
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${ctx.raw}`}}}
+    }
+  });
+
+  cht('cMensal',{
+    type:'bar',
+    data:{
+      labels:mLabels,
+      datasets:[
+        {label:'Aberto',  data:meses.map(m=>mesFechMap[m]?.abertos||0),  backgroundColor:C.roxoA, borderRadius:3},
+        {label:'Fechado', data:meses.map(m=>mesFechMap[m]?.fechados_status||0), backgroundColor:C.verdeA, borderRadius:3},
+        {label:'Total',   data:meses.map(m=>mesFechMap[m]?.total||0),    type:'line',borderColor:C.amarelo,backgroundColor:'transparent',pointRadius:3,pointBackgroundColor:C.amarelo,tension:0.4,borderWidth:2}
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{grid:{color:C.grid},ticks:{...C.tick,maxRotation:45}},
+        y:{grid:{color:C.grid},ticks:C.tick}
+      }
+    }
+  });
+
+  // Saldo acumulado
+  let acum=0;
+  const saldoAcum=meses.map(m=>{acum+=(mesFechMap[m]?.criados||0)-(mesFechMap[m]?.concluidos||0);return acum;});
+
+  cht('cFluxo',{
+    type:'bar',
+    data:{
+      labels:mLabels,
+      datasets:[
+        {label:'Criados',    data:meses.map(m=>mesFechMap[m]?.criados||0),    backgroundColor:'rgba(123,95,201,0.7)', borderRadius:3},
+        {label:'Concluídos', data:meses.map(m=>mesFechMap[m]?.concluidos||0), backgroundColor:'rgba(73,169,113,0.7)', borderRadius:3},
+        {label:'Saldo acumulado', data:saldoAcum, type:'line', borderColor:C.amarelo, backgroundColor:'transparent',
+         pointRadius:4, pointBackgroundColor:saldoAcum.map(v=>v>0?C.verm:C.verde),
+         tension:0.4, borderWidth:2, borderDash:[]}
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:ctx=>{
+          if(ctx.dataset.label==='Saldo acumulado') return ` Saldo acum.: ${ctx.raw>0?'+':''}${ctx.raw}`;
+          return ` ${ctx.dataset.label}: ${ctx.raw}`;
+        }}}
+      },
+      scales:{
+        x:{grid:{color:C.grid},ticks:{...C.tick,maxRotation:45}},
+        y:{grid:{color:C.grid},ticks:C.tick}
+      }
+    }
+  });
+
+  const tot=noSLA+foraDoSLA+atrasados||1;
+  cht('cPizza',{
+    type:'pie',
+    data:{
+      labels:[
+        `No SLA (${Math.round(noSLA/tot*100)}%)`,
+        `Fora (${Math.round(foraDoSLA/tot*100)}%)`,
+        `Atrasado (${Math.round(atrasados/tot*100)}%)`
+      ],
+      datasets:[{data:[noSLA,foraDoSLA,atrasados],backgroundColor:[C.verde,C.roxoL,C.verm],borderWidth:0}]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{color:'#A89EC0',font:{size:10,family:'Syne'},boxWidth:10,padding:8}}}
+    }
+  });
+}
+
+loadData();
+setInterval(loadData,60000);
+</script>
+</body>
+</html>
